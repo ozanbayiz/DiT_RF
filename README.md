@@ -1,7 +1,6 @@
 # Diffusion Transformer with Rectified Flow for Image Generation
----
 
-<div style="display: flex; justify-content: center; align-items: center; justify-content: space-around;">
+<div style="display: flex; align-items: center; justify-content: space-around;">
     <img src="content/fashion_MNIST_generation.gif" width="40%" height="auto">
     <img src="content/fashion_MNIST_result.png" width="40%" height="auto">
 </div>
@@ -12,7 +11,7 @@
 
 I watched a [youtube video about diffusion transformers](https://www.youtube.com/watch?v=aSLDXdc2hkk) and was like "this will be a a straightforward & fun side quest." 
 
-My implementation supports training on CPU, MPS, and GPU, as well as distributed training across multiple GPUs. I tried to make everything as modular & spelled-out as possible so that it's easy to understand for people who are new to this stuff like I am.
+My implementation supports training on CPU, MPS, and GPU, as well as distributed training across multiple GPUs. I tried to make everything as modular & spelled-out as possible so that it's easy to understand/modify for people who are new to this stuff like I am. I currently don't use an autoencoder for latent diffusion, but this would be a cool next step.
 
 This implementation is pretty heavily based on the [official DiT implementation](https://github.com/facebookresearch/DiT/tree/main), [the youtube video's implementation](https://github.com/explainingai-code/DiT-PyTorch/tree/main/), and [this implementation which pairs DiT with rectified flow](https://github.com/cloneofsimo/minRF/tree/main).
 
