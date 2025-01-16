@@ -1,6 +1,6 @@
 # Diffusion Transformer with Rectified Flow for Image Generation
 
-<div style="display: flex; align-items: center; justify-content: space-around;">
+<div style="text-align: center;">
     <img src="content/fashion_MNIST_generation.gif" width="40%" height="auto">
     <img src="content/fashion_MNIST_result.png" width="40%" height="auto">
 </div>
