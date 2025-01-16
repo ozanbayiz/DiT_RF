@@ -1,0 +1,43 @@
+dataset:
+  name: "FashionMNIST" # dataset name for torchvision.datasets
+  data_dir: "" # directory to load dataset from, leave empty if using torchvision.datasets
+  image_height: 28
+  image_width: 28
+  image_channels: 1
+  num_classes: 10
+
+data_transform:
+  padding: 2
+  normalize:
+    mean: 0.5
+    std: 0.5
+
+model:
+  hidden_size: 64 # hidden size for DiT
+  num_layers: 6 # number of attention layers
+  num_heads: 4 # number of attention heads
+  patch_size: 2 # patch size for image
+  time_embedding_size: 256 # time embedding size
+  mlp_ratio: 4 # for scaling attention block's MLP's hidden size
+  dropout_prob: 0.1 # dropout probability for CFG
+
+training:
+  distributed: true # use distributed training
+  num_workers: 4 # number of workers for dataloader
+  num_epochs: 40 # number of epochs
+  batch_size: 256 # global batch size. if using distributed training, ensure this is divisible by world size
+  learning_rate: 0.0005 # learning rate
+  weight_decay: 0 # weight decay for AdamW optimizer
+  train_ema: false # train an EMA model?
+  checkpoint_dir: "./checkpoints/" # directory to save checkpoints
+  checkpoint_every: 0 # checkpoint every N steps, 0 for no checkpointing
+  sample_after_epoch: true # sample after every epoch
+  log_every: 1000 # log every N steps, 0 for no logging
+  global_seed: 8008 # global seed for reproducibility
+
+sampling:
+  sample_steps: 50 # number of steps for sampling
+  cfg_scale: 2.0 # CFG scale for sampling
+  sample_dir: "./samples/" # directory to save samples
+  num_images: 4 # number of images to sample
+  num_rows: 2 # number of rows to display images in
