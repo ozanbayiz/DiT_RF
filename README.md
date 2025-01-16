@@ -25,7 +25,6 @@ cd DiT_RF
 ```
 
 create the conda environment:
-
 ```bash
 conda env create -f environment.yml
 ```
@@ -40,13 +39,12 @@ conda activate DiT_RF
 
 ## Training
 
-Configure the `config.yml` file to your liking, then run:
-
+configure the `config.yml` file to your liking, then run:
 ```bash
 python train.py --config config.yml
 ```
-For distributed training, run:
 
+for distributed training, run:
 ```bash
 torchrun train.py --config config.yml
 ```
