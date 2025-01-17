@@ -52,7 +52,8 @@ torchrun train.py --config <path/to/your/config.yml>
 ---
 
 ## Sampling
-configure the `sampling` section in `config.yml` as desired, then run:
+
+configure the `sampling` section in your `config.yml` as desired, then run:
 ```bash
 python sample.py --config <path/to/your/config.yml>
 ```
@@ -78,3 +79,5 @@ python sample.py --config <path/to/your/config.yml>
     url={https://github.com/cloneofsimo/minRF},
 }
 ```
+Although he did not make a citation, the youtube video's repo can be found at
+https://github.com/explainingai-code/DiT-PyTorch/tree/main/
