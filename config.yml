@@ -13,6 +13,10 @@ data_transform:
     std: 0.5
 
 model:
+  in_height: 32 # input height
+  in_width: 32 # input width
+  in_channels: 1 # input channels
+  num_classes: 10 # number of classes. make sure this matches the dataset!
   hidden_size: 64 # hidden size for DiT
   num_layers: 6 # number of attention layers
   num_heads: 4 # number of attention heads
@@ -30,6 +34,7 @@ training:
   weight_decay: 0 # weight decay for AdamW optimizer
   train_ema: false # train an EMA model?
   checkpoint_dir: "./checkpoints/" # directory to save checkpoints
+  checkpoint_name: "fashionMNIST" # name of the checkpoint
   checkpoint_every: 0 # checkpoint every N steps, 0 for no checkpointing
   sample_after_epoch: true # sample after every epoch
   log_every: 1000 # log every N steps, 0 for no logging
@@ -39,5 +44,9 @@ sampling:
   sample_steps: 50 # number of steps for sampling
   cfg_scale: 2.0 # CFG scale for sampling
   sample_dir: "./samples/" # directory to save samples
+  save_gif: false # save a gif of the sampling process?
   num_images: 4 # number of images to sample
-  num_rows: 2 # number of rows to display images in
+  num_rows: 4 # number of rows to display images in
+  checkpoint_path: "./checkpoints/fashionMNIST_final.pt" # path to checkpoint to load
+  class_labels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5] # class labels to sample
+  name: "sample" # name of the sample`

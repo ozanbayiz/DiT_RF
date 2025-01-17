@@ -31,11 +31,15 @@ class RF:
         return loss
     
     @torch.no_grad()
-    def sample(self, z, y, sample_steps=50, cfg_scale=2.0):
+    def sample(self, z, y, sample_steps=50, cfg_scale=2.0, return_all_steps=True):
         b = z.shape[0]
-        dt = 1.0 / sample_steps  # step size
+
+        # step size
+        dt = 1.0 / sample_steps
+        # # convert to tensor
         dt = torch.tensor([dt] * b, device=z.device).view([b, *([1] * len(z.shape[1:]))])
 
+        # list of images from t=1 to t=0
         images = [z]
 
         for i in range(sample_steps, 0, -1):
@@ -50,7 +54,11 @@ class RF:
             
             # take step
             z = z - v_theta * dt
+
+            # image at t_i
             images.append(z)
         
-        return images   
-        
+        if return_all_steps:
+            return images
+        else:
+            return z

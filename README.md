@@ -1,19 +1,19 @@
 # Diffusion Transformer with Rectified Flow for Image Generation
 
 <p align="center">
-    <img src="content/fashion_MNIST_generation.gif" width="40%" height="auto">
-    <img src="content/fashion_MNIST_result.png" width="40%" height="auto">
+    <img src="content/fashionMNIST_40_epochs.gif" width="40%" height="auto">
+    <img src="content/fashionMNIST_40_epochs.png" width="40%" height="auto">
 </div>
 
 <br>
 
 > 50 Epochs on FashionMNIST, 50 Sampling Steps, ~5 minutes on A100
 
-I watched a [youtube video about diffusion transformers](https://www.youtube.com/watch?v=aSLDXdc2hkk) and was like "this will be a a straightforward & fun side quest." 
+I watched a [youtube video](https://www.youtube.com/watch?v=aSLDXdc2hkk) about [Scalable Diffusion Models with Transformers (DiT)](https://www.wpeebles.com/DiT) and was like "eh I need a side quest anyway."
 
-My implementation supports training on CPU, MPS, and GPU, as well as distributed training across multiple GPUs. I tried to make everything as modular & spelled-out as possible so that it's easy to understand/modify for people who are new to this stuff like I am. I currently don't use an autoencoder for latent diffusion, but this would be a cool next step.
+My implementation supports training on CPU, MPS, and GPU, as well as distributed training across multiple GPUs. I tried to make everything as modular and spelled-out as possible so that it's easy to understand/modify for people who are new to this stuff like I am. I currently don't use an autoencoder for latent diffusion, but this would be a cool next step.
 
-This implementation is pretty heavily based on the [official DiT implementation](https://github.com/facebookresearch/DiT/tree/main), [the youtube video's implementation](https://github.com/explainingai-code/DiT-PyTorch/tree/main/), and [this implementation which pairs DiT with rectified flow](https://github.com/cloneofsimo/minRF/tree/main).
+This implementation is pretty heavily based on the [official DiT implementation](https://github.com/facebookresearch/DiT/tree/main), the [youtube video's implementation](https://github.com/explainingai-code/DiT-PyTorch/tree/main/), and [this implementation which pairs DiT with rectified flow](https://github.com/cloneofsimo/minRF/tree/main).
 
 ---
 

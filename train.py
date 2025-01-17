@@ -6,12 +6,11 @@ import argparse
 from collections import OrderedDict
 from copy import deepcopy
 from time import time
-import numpy as np
-from PIL import Image
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-from torchvision.utils import make_grid
+
+from sample import sample_images_as_grid
 from model.DiT import DiT
 from model.RF import RF
 
@@ -28,37 +27,8 @@ def update_ema(ema_model, model, decay=0.999):
         if param.requires_grad: # prevent updates to positional embeddings
             ema_params[name].data.mul_(decay).add_(param.data, alpha=1 - decay)
 
-
-def sample_images(model, image_shape, name, device, steps, cfg_scale, sample_dir):
-    # sample 16 images
-    cond = torch.arange(16, device=device) % 10
-    z_1 = torch.randn(16, *image_shape, device=device)
-    imgs = model.sample(z_1, cond, steps, cfg_scale)
-
-    # create & save gif
-    gif = []
-    for img_t in imgs:
-        # unnormalize image
-        img = img_t * 0.5 + 0.5
-        img = img.clamp(0, 1)
-        # convert to (4, 4) grid
-        img_grid = make_grid(img.float(), nrow=4)  # (c, h, w)
-        img = img_grid.permute(1, 2, 0).cpu().numpy()  # (h, w, c)
-        img = (img * 255).astype(np.uint8)
-        gif.append(Image.fromarray(img))
-    gif[0].save(
-        f"{sample_dir}/sample_{name}.gif",
-        save_all=True,
-        append_images=gif[1:],
-        duration=1,
-        loop=0,
-    )
-
-    # also save final result
-    last_img = gif[-1]
-    last_img.save(f"{sample_dir}/sample_{name}_last.png")
-
 def create_logger(logging_dir="./", rank=0):
+    # https://github.com/facebookresearch/DiT/blob/main/train.py
     # real logger
     if rank == 0:
         logging.basicConfig(
@@ -183,20 +153,7 @@ def train(config_path):
         dataloader = DataLoader(dataset, batch_size=train_config['batch_size'], shuffle=True)
 
     # initialize DiT / RF
-    in_height = dataset_config['image_height'] + 2 * data_transform['padding']
-    in_width = dataset_config['image_width'] + 2 * data_transform['padding']
-    model = DiT(
-        in_height=in_height,
-        in_width=in_width,
-        in_channels=dataset_config['image_channels'],
-        num_classes=dataset_config['num_classes'],
-        patch_size=model_config['patch_size'],
-        time_embedding_size=model_config['time_embedding_size'],
-        num_layers=model_config['num_layers'],
-        num_heads=model_config['num_heads'],
-        mlp_ratio=model_config['mlp_ratio'],
-        hidden_size=model_config['hidden_size'],
-    ).to(device)
+    model = DiT(**model_config).to(device)
     if train_distributed:
         model = DDP(model, device_ids=[rank])
         module = model.module
@@ -211,7 +168,10 @@ def train(config_path):
         for param in ema.parameters():
             param.requires_grad = False
         ema_rf = RF(ema)
-        update_ema(ema, module, decay=0)
+        if train_distributed:
+            update_ema(ema, model.module, decay=0)
+        else:
+            update_ema(ema, model, decay=0)
         ema.eval()
 
     # initialize optimizer
@@ -222,7 +182,7 @@ def train(config_path):
     )
 
 
-    ### training data
+    ### training loop
     ### ### ### ### ### ### ### ### 
 
     model.train()
@@ -230,6 +190,7 @@ def train(config_path):
     train_steps = 0
     log_steps = 0
     start_time = time()
+
     for epoch in range(train_config['num_epochs']):
         logger.info(f"starting epoch {epoch+1}/{train_config['num_epochs']}")
 
@@ -242,8 +203,10 @@ def train(config_path):
             optim.step()
 
             if train_ema:
-                update_ema(ema, module, decay=0.999)
-
+                if train_distributed:
+                    update_ema(ema, model.module, decay=0.999)
+                else:
+                    update_ema(ema, model, decay=0.999)
 
             # logging
             running_loss += loss.item()
@@ -267,7 +230,6 @@ def train(config_path):
                 log_steps = 0
                 start_time = time()
 
-
             # take checkpoint
             if (
                 train_config["checkpoint_every"] and 
@@ -275,54 +237,74 @@ def train(config_path):
                 train_steps > 0
             ):
                 checkpoint = {
-                    'model': model.state_dict(),
-                    'optim': optim.state_dict(),
-                    'train_steps': train_steps
+                    "model": model.state_dict(),
+                    "optim": optim.state_dict(),
+                    "train_steps": train_steps,
+                    "model_config": model_config,
                 }
                 if train_ema:
                     checkpoint['ema'] = ema.state_dict()
-                torch.save(checkpoint, osp.join(train_config['checkpoint_dir'], f"checkpoint_{train_steps}.pth"))
+                torch.save(checkpoint, osp.join(train_config['checkpoint_dir'], f"checkpoint_{train_steps}.pt"))
 
-        # sample images from EMA model,
-        if train_ema:
-            sample_images(
-                model=ema_rf, 
-                image_shape=(dataset_config['image_channels'], in_height, in_width), 
-                name=f"ema_{epoch+1}_epochs", 
+        # sample images
+        if train_config['sample_after_epoch']:
+            # sample images from EMA model,
+            if train_ema:
+                sample_images_as_grid(
+                    rf=ema_rf,
+                    device=device,
+                    image_shape=(model_config['in_channels'], model_config['in_height'], model_config['in_width']),
+                    num_images=sample_config['num_images'],
+                    num_rows=sample_config['num_rows'],
+                    num_classes=model_config['num_classes'],
+                    cond=sample_config['class_labels'],
+                    steps=sample_config['sample_steps'],
+                    cfg_scale=sample_config['cfg_scale'],
+                    name=f"model_{epoch+1}_epochs",
+                    sample_dir=sample_config['sample_dir'],
+                    save_gif=sample_config['save_gif'],
+                )
+
+            # sample images from training model
+            model.eval()
+            sample_images_as_grid(
+                rf=rf,
                 device=device,
-                steps=train_config['sample_steps'], 
-                cfg_scale=train_config['cfg_scale'], 
-                sample_dir=train_config['sample_dir']
+                image_shape=(model_config['in_channels'], model_config['in_height'], model_config['in_width']),
+                num_images=sample_config['num_images'],
+                num_rows=sample_config['num_rows'],
+                num_classes=model_config['num_classes'],
+                cond=sample_config['class_labels'],
+                steps=sample_config['sample_steps'],
+                cfg_scale=sample_config['cfg_scale'],
+                name=f"model_{epoch+1}_epochs",
+                sample_dir=sample_config['sample_dir'],
+                save_gif=sample_config['save_gif'],
             )
-
-        # sample images from training model
-        model.eval()
-        sample_images(
-            model=rf, 
-            image_shape=(dataset_config['image_channels'], in_height, in_width), 
-            name=f"model_{epoch+1}_epochs", 
-            device=device,
-            steps=sample_config['sample_steps'], 
-            cfg_scale=sample_config['cfg_scale'], 
-            sample_dir=sample_config['sample_dir']
-        )
-        model.train()
+            model.train()
+            logger.info(f"sampled {sample_config['num_images']} images from model at epoch {epoch+1}")
+            
 
     # training complete
-    print("training complete!")
+    logger.info("training complete!")
     model.eval()
+    model = model.to("cpu")
     final_checkpoint = {
-        "model": model.state_dict()
+        "config": model_config,
     }
+    if train_distributed:
+        final_checkpoint['model'] = model.module.state_dict()
+    else:
+        final_checkpoint['model'] = model.state_dict()
     if train_ema:
         final_checkpoint['ema'] = ema.state_dict()
-    torch.save(final_checkpoint, osp.join(train_config['checkpoint_dir'], f"final_model.pth"))
+    torch.save(final_checkpoint, osp.join(train_config['checkpoint_dir'], f"{train_config['checkpoint_name']}.pt"))
 
     if train_distributed:
         dist.destroy_process_group()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default="config.yaml", help="path to config file")
+    parser.add_argument("--config", type=str, default="config.yml", help="path to config file")
     args = parser.parse_args()
     train(args.config)
